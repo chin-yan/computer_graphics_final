@@ -63,21 +63,35 @@ bool hit_world(const Ray &r, float t_min, float t_max, HitRecord &rec)
 // }
 //
 // See Chapter 7 in the "Ray Tracing in a Weekend" book
+
+glm::vec3 random_in_unit_sphere()
+{
+    glm::vec3 p;
+    do {
+        // 生成-1到1之间的随机坐标
+        p = 2.0f * glm::vec3(drand48(), drand48(), drand48()) - glm::vec3(1.0f);
+    } while (glm::length(p) >= 1.0f); // 确保点在单位球内
+    return p;
+}
+
 glm::vec3 color(RTContext &rtx, const Ray &r, int max_bounces)
 {
     if (max_bounces < 0) return glm::vec3(0.0f);
 
     HitRecord rec;
-    if (hit_world(r, 0.0f, 9999.0f, rec)) {
-        rec.normal = glm::normalize(rec.normal);  // Always normalise before use!
+    if (hit_world(r, rtx.epsilon, 9999.0f, rec)) {
+        rec.normal = glm::normalize(rec.normal);  // 总是在使用前归一化!
         if (rtx.show_normals) { return rec.normal * 0.5f + 0.5f; }
 
-        // Implement lighting for materials here
-        // ...
-        return glm::vec3(0.0f);
+        // 生成随机的漫反射方向
+        glm::vec3 target = rec.p + rec.normal + random_in_unit_sphere();
+        Ray scattered(rec.p, target - rec.p);
+        
+        // 递归调用，计算漫反射光线的颜色，并将其乘以0.5作为衰减
+        return 0.5f * color(rtx, scattered, max_bounces - 1);
     }
 
-    // If no hit, return sky color
+    // 如果没有命中，返回天空颜色
     glm::vec3 unit_direction = glm::normalize(r.direction());
     float t = 0.5f * (unit_direction.y + 1.0f);
     return (1.0f - t) * rtx.ground_color + t * rtx.sky_color;
@@ -92,12 +106,8 @@ void setupScene(RTContext &rtx, const char *filename)
         //Sphere(glm::vec3(1.0f, 0.0f, 0.0f), 0.5f),
         //Sphere(glm::vec3(-1.0f, 0.0f, 0.0f), 0.5f),
     //};
-    //g_scene.boxes = {
-    //    Box(glm::vec3(0.0f, -0.25f, 0.0f), glm::vec3(0.25f)),
-    //    Box(glm::vec3(1.0f, -0.25f, 0.0f), glm::vec3(0.25f)),
-    //    Box(glm::vec3(-1.0f, -0.25f, 0.0f), glm::vec3(0.25f)),
-    //};
 
+    // 加载网格...
     cg::OBJMesh mesh;
     cg::objMeshLoad(mesh, filename);
     g_scene.mesh.clear();
@@ -111,7 +121,6 @@ void setupScene(RTContext &rtx, const char *filename)
         g_scene.mesh.push_back(Triangle(v0, v1, v2));
     }
 }
-
 // MODIFY THIS FUNCTION!
 void updateLine(RTContext &rtx, int y)
 {
@@ -155,7 +164,8 @@ void updateLine(RTContext &rtx, int y)
         }
         
         // 计算平均值并更新图像
-        col /= float(rtx.samples_per_pixel);
+        // 通过gamma校正改善图像质量
+        col = glm::sqrt(col / float(rtx.samples_per_pixel)); // 简单的gamma校正
         rtx.image[y * nx + x] += glm::vec4(col, 1.0f);
     }
 }
