@@ -1,20 +1,23 @@
 #pragma once
 
-#include "rt_hitable.h"
+#include "rt_hitable.h"  // 包含 HitRecord 和 Hitable
+#include "rt_ray.h"      // 包含 Ray
+#include "rt_material.h" // 包含 Material
 
 namespace rt {
 
 class Sphere : public Hitable {
-  public:
+public:
     Sphere() {}
-    Sphere(const glm::vec3 &cen, float r) : center(cen), radius(r){};
+    Sphere(const glm::vec3 &cen, float r, Material* m = nullptr)
+        : center(cen), radius(r), material(m) {};
     virtual bool hit(const Ray &r, float t_min, float t_max, HitRecord &rec) const;
 
     glm::vec3 center;
     float radius;
+    Material* material;
 };
 
-// Ray-sphere test from "Ray Tracing in a Weekend" book (page 16)
 bool Sphere::hit(const Ray &r, float t_min, float t_max, HitRecord &rec) const
 {
     glm::vec3 oc = r.origin() - center;
@@ -30,6 +33,7 @@ bool Sphere::hit(const Ray &r, float t_min, float t_max, HitRecord &rec) const
             rec.t = temp;
             rec.p = r.point_at_parameter(rec.t);
             rec.normal = (rec.p - center) / radius;
+            rec.material = material;  // 設置材質
             return true;
         }
     }

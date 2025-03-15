@@ -7,34 +7,32 @@ namespace rt {
 class Triangle : public Hitable {
   public:
     Triangle() {}
-    Triangle(const glm::vec3 &a, const glm::vec3 &b, const glm::vec3 &c) : v0(a), v1(b), v2(c){};
+    Triangle(const glm::vec3 &cen, float r, Material* m)
+        : center(cen), radius(r), material(m) {};
     virtual bool hit(const Ray &r, float t_min, float t_max, HitRecord &rec) const;
 
-    glm::vec3 v0;
-    glm::vec3 v1;
-    glm::vec3 v2;
+    glm::vec3 center;
+    float radius;
+    Material* material;
 };
 
-// Ray-triangle test adapted from "Real-Time Collision Detection" book (pages 191--192)
 bool Triangle::hit(const Ray &r, float t_min, float t_max, HitRecord &rec) const
 {
-    glm::vec3 n = glm::cross(v1 - v0, v2 - v0);
-    float d = glm::dot(-r.direction(), n);
-    if (d > 0.0f) {
-        float temp = glm::dot(r.origin() - v0, n);
-        if (temp >= 0.0f) {
-            glm::vec3 e = glm::cross(-r.direction(), r.origin() - v0);
-            float v = glm::dot(v2 - v0, e);
-            float w = -glm::dot(v1 - v0, e);
-            if (v >= 0.0f && v <= d && w >= 0.0f && v + w <= d) {
-                temp /= d;
-                if (temp < t_max && temp > t_min) {
-                    rec.t = temp;
-                    rec.p = r.point_at_parameter(rec.t);
-                    rec.normal = n;
-                    return true;
-                }
-            }
+    glm::vec3 oc = r.origin() - center;
+    float a = glm::dot(r.direction(), r.direction());
+    float b = 2.0f * glm::dot(oc, r.direction());
+    float c = glm::dot(oc, oc) - radius * radius;
+    float discriminant = (b * b - 4 * a * c);
+    if (discriminant > 0.0f) {
+        float temp1 = (-b - glm::sqrt(discriminant)) / (2.0f * a);
+        float temp2 = (-b + glm::sqrt(discriminant)) / (2.0f * a);
+        float temp = (temp1 < t_max && temp1 > t_min) ? temp1 : temp2;
+        if (temp < t_max && temp > t_min) {
+            rec.t = temp;
+            rec.p = r.point_at_parameter(rec.t);
+            rec.normal = (rec.p - center) / radius;
+            rec.material = material;
+            return true;
         }
     }
     return false;

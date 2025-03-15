@@ -22,8 +22,15 @@ struct RTContext {
     glm::vec3 ground_color = glm::vec3(1.0f, 1.0f, 1.0f);
     glm::vec3 sky_color = glm::vec3(0.5f, 0.7f, 1.0f);
     bool show_normals = true;
-    // Add more settings and parameters here
-    // ...
+    
+    // 新增材質參數
+    glm::vec3 sphere_colors[3] = {
+        glm::vec3(0.9f, 0.2f, 0.2f),
+        glm::vec3(0.8f, 0.8f, 0.8f),
+        glm::vec3(1.0f, 1.0f, 1.0f)
+    };
+    float metal_fuzz = 0.2f;
+    float glass_ref_idx = 1.5f;
 };
 
 void setupScene(RTContext &rtx, const char *mesh_filename);

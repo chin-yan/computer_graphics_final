@@ -137,13 +137,45 @@ void showGui(Context &ctx)
     if (ImGui::SliderInt("Max bounces", &ctx.rtx.max_bounces, 0, 10)) {
         rt::resetAccumulation(ctx.rtx);
     }
-    if (ImGui::ColorEdit3("Sky color", &ctx.rtx.sky_color[0])) { rt::resetAccumulation(ctx.rtx); }
+    if (ImGui::ColorEdit3("Sky color", &ctx.rtx.sky_color[0])) {
+        rt::resetAccumulation(ctx.rtx);
+    }
     if (ImGui::ColorEdit3("Ground color", &ctx.rtx.ground_color[0])) {
         rt::resetAccumulation(ctx.rtx);
     }
-    if (ImGui::Checkbox("Show normals", &ctx.rtx.show_normals)) { rt::resetAccumulation(ctx.rtx); }
-    // Add more settings and parameters here
-    // ...
+    if (ImGui::Checkbox("Show normals", &ctx.rtx.show_normals)) {
+        rt::resetAccumulation(ctx.rtx);
+    }
+    
+    // 新增材質控制選項
+    if (ImGui::CollapsingHeader("Materials")) {
+        // 可以添加更多材質參數控制
+        if (ImGui::ColorEdit3("Sphere 1 color", &ctx.rtx.sphere_colors[0][0])) {
+            rt::resetAccumulation(ctx.rtx);
+        }
+        if (ImGui::ColorEdit3("Sphere 2 color", &ctx.rtx.sphere_colors[1][0])) {
+            rt::resetAccumulation(ctx.rtx);
+        }
+        if (ImGui::ColorEdit3("Sphere 3 color", &ctx.rtx.sphere_colors[2][0])) {
+            rt::resetAccumulation(ctx.rtx);
+        }
+        if (ImGui::SliderFloat("Metal Fuzz", &ctx.rtx.metal_fuzz, 0.0f, 1.0f)) {
+            rt::resetAccumulation(ctx.rtx);
+        }
+        if (ImGui::SliderFloat("Glass Refraction", &ctx.rtx.glass_ref_idx, 1.0f, 2.5f)) {
+            rt::resetAccumulation(ctx.rtx);
+        }
+    }
+    
+    // 光線追蹤參數
+    if (ImGui::CollapsingHeader("Ray Tracing")) {
+        if (ImGui::SliderInt("Samples per pixel", &ctx.rtx.max_frames, 1, 1000)) {
+            rt::resetAccumulation(ctx.rtx);
+        }
+        if (ImGui::SliderFloat("Epsilon", &ctx.rtx.epsilon, 0.0001f, 0.01f, "%.5f")) {
+            rt::resetAccumulation(ctx.rtx);
+        }
+    }
 
     ImGui::Text("Progress");
     ImGui::ProgressBar(float(ctx.rtx.current_frame) / ctx.rtx.max_frames);

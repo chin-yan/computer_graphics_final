@@ -1,6 +1,7 @@
 #include "rt_raytracing.h"
 #include "rt_ray.h"
 #include "rt_hitable.h"
+#include "rt_material.h" 
 #include "rt_sphere.h"
 #include "rt_triangle.h"
 #include "rt_box.h"
@@ -17,6 +18,7 @@ struct Scene {
     std::vector<Box> boxes;
     std::vector<Triangle> mesh;
     Box mesh_bbox;
+    std::vector<std::shared_ptr<Material>> materials;
 } g_scene;
 
 bool hit_world(const Ray &r, float t_min, float t_max, HitRecord &rec)
@@ -68,12 +70,15 @@ glm::vec3 color(RTContext &rtx, const Ray &r, int max_bounces)
     if (max_bounces < 0) return glm::vec3(0.0f);
 
     HitRecord rec;
-    if (hit_world(r, 0.0f, 9999.0f, rec)) {
+    if (hit_world(r, rtx.epsilon, 9999.0f, rec)) {
         rec.normal = glm::normalize(rec.normal);  // Always normalise before use!
         if (rtx.show_normals) { return rec.normal * 0.5f + 0.5f; }
 
-        // Implement lighting for materials here
-        // ...
+        Ray scattered;
+        glm::vec3 attenuation;
+        if (rec.material && rec.material->scatter(r, rec, attenuation, scattered)) {
+            return attenuation * color(rtx, scattered, max_bounces - 1);
+        }
         return glm::vec3(0.0f);
     }
 
@@ -86,18 +91,36 @@ glm::vec3 color(RTContext &rtx, const Ray &r, int max_bounces)
 // MODIFY THIS FUNCTION!
 void setupScene(RTContext &rtx, const char *filename)
 {
-    //g_scene.ground = Sphere(glm::vec3(0.0f, -1000.5f, 0.0f), 1000.0f);
-    //g_scene.spheres = {
-        //Sphere(glm::vec3(0.0f, 0.0f, 0.0f), 0.5f),
-        //Sphere(glm::vec3(1.0f, 0.0f, 0.0f), 0.5f),
-        //Sphere(glm::vec3(-1.0f, 0.0f, 0.0f), 0.5f),
-    //};
-    //g_scene.boxes = {
-    //    Box(glm::vec3(0.0f, -0.25f, 0.0f), glm::vec3(0.25f)),
-    //    Box(glm::vec3(1.0f, -0.25f, 0.0f), glm::vec3(0.25f)),
-    //    Box(glm::vec3(-1.0f, -0.25f, 0.0f), glm::vec3(0.25f)),
-    //};
+    // 創建材質
+    auto ground_material = std::make_shared<Lambertian>(glm::vec3(0.5f, 0.5f, 0.5f));
+    auto red_diffuse = std::make_shared<Lambertian>(glm::vec3(0.9f, 0.2f, 0.2f));
+    auto blue_diffuse = std::make_shared<Lambertian>(glm::vec3(0.2f, 0.2f, 0.9f));
+    auto green_diffuse = std::make_shared<Lambertian>(glm::vec3(0.2f, 0.9f, 0.2f));
+    auto metal_material = std::make_shared<rt::Metal>(glm::vec3(0.8f, 0.8f, 0.8f), 0.2f);
+    auto glass_material = std::make_shared<Dielectric>(1.5f);
+    
+    // 保存材質
+    g_scene.materials.push_back(ground_material);
+    g_scene.materials.push_back(red_diffuse);
+    g_scene.materials.push_back(blue_diffuse);
+    g_scene.materials.push_back(green_diffuse);
+    g_scene.materials.push_back(metal_material);
+    g_scene.materials.push_back(glass_material);
+    
+    // 創建場景物體
+    g_scene.ground = Sphere(glm::vec3(0.0f, -1000.5f, 0.0f), 1000.0f, ground_material.get());
+    g_scene.spheres = {
+        Sphere(glm::vec3(0.0f, 0.0f, 0.0f), 0.5f, red_diffuse.get()),
+        Sphere(glm::vec3(1.0f, 0.0f, 0.0f), 0.5f, metal_material.get()),
+        Sphere(glm::vec3(-1.0f, 0.0f, 0.0f), 0.5f, glass_material.get()),
+    };
+    g_scene.boxes = {
+        Box(glm::vec3(0.0f, -0.25f, 0.0f), glm::vec3(0.25f), green_diffuse.get()),
+        Box(glm::vec3(1.0f, -0.25f, 0.0f), glm::vec3(0.25f), blue_diffuse.get()),
+        Box(glm::vec3(-1.0f, -0.25f, 0.0f), glm::vec3(0.25f), red_diffuse.get()),
+    };
 
+    // 載入3D模型
     cg::OBJMesh mesh;
     cg::objMeshLoad(mesh, filename);
     g_scene.mesh.clear();
@@ -108,7 +131,7 @@ void setupScene(RTContext &rtx, const char *filename)
         glm::vec3 v0 = mesh.vertices[i0] + glm::vec3(0.0f, 0.135f, 0.0f);
         glm::vec3 v1 = mesh.vertices[i1] + glm::vec3(0.0f, 0.135f, 0.0f);
         glm::vec3 v2 = mesh.vertices[i2] + glm::vec3(0.0f, 0.135f, 0.0f);
-        g_scene.mesh.push_back(Triangle(v0, v1, v2));
+        g_scene.mesh.push_back(Triangle(v0, v1, v2, blue_diffuse.get()));
     }
 }
 
