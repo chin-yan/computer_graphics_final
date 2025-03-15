@@ -124,28 +124,39 @@ void updateLine(RTContext &rtx, int y)
     glm::vec3 origin(0.0f, 0.0f, 0.0f);
     glm::mat4 world_from_view = glm::inverse(rtx.view);
 
-    // You can try parallelising this loop by uncommenting this line:
+    // 你可以尝试通过取消注释此行来并行化此循环：
     //#pragma omp parallel for schedule(dynamic)
     for (int x = 0; x < nx; ++x) {
-        float u = (float(x) + 0.5f) / float(nx);
-        float v = (float(y) + 0.5f) / float(ny);
-        Ray r(origin, lower_left_corner + u * horizontal + v * vertical);
-        r.A = glm::vec3(world_from_view * glm::vec4(r.A, 1.0f));
-        r.B = glm::vec3(world_from_view * glm::vec4(r.B, 0.0f));
-
-        // Note: in the RTOW book, they have an inner loop for the number of
-        // samples per pixel. Here, you do not need this loop, because we want
-        // some interactivity and accumulate samples over multiple frames
-        // instead (until the camera moves or the rendering is reset).
-
+        glm::vec3 col(0.0f);
+        
         if (rtx.current_frame <= 0) {
-            // Here we make the first frame blend with the old image,
-            // to smoothen the transition when resetting the accumulation
+            // 这里我们让第一帧与旧图像混合，
+            // 以平滑重置累积时的过渡
             glm::vec4 old = rtx.image[y * nx + x];
             rtx.image[y * nx + x] = glm::clamp(old / glm::max(1.0f, old.a), 0.0f, 1.0f);
         }
-        glm::vec3 c = color(rtx, r, rtx.max_bounces);
-        rtx.image[y * nx + x] += glm::vec4(c, 1.0f);
+        //requirement 1
+        // 对每个像素进行多次采样
+        for (int s = 0; s < rtx.samples_per_pixel; s++) {
+            // 添加随机抖动
+            float random_u = float(rand()) / float(RAND_MAX); // 0-1之间的随机数
+            float random_v = float(rand()) / float(RAND_MAX);
+            
+            // 计算带抖动的 u 和 v
+            float u = (float(x) + random_u) / float(nx);
+            float v = (float(y) + random_v) / float(ny);
+            
+            Ray r(origin, lower_left_corner + u * horizontal + v * vertical);
+            r.A = glm::vec3(world_from_view * glm::vec4(r.A, 1.0f));
+            r.B = glm::vec3(world_from_view * glm::vec4(r.B, 0.0f));
+            
+            // 累积颜色结果
+            col += color(rtx, r, rtx.max_bounces);
+        }
+        
+        // 计算平均值并更新图像
+        col /= float(rtx.samples_per_pixel);
+        rtx.image[y * nx + x] += glm::vec4(col, 1.0f);
     }
 }
 

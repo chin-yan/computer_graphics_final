@@ -150,6 +150,10 @@ void showGui(Context &ctx)
     if (ImGui::Button("Freeze/Resume")) { ctx.rtx.freeze = !ctx.rtx.freeze; }
     ImGui::SameLine();
     if (ImGui::Button("Reset")) { rt::resetImage(ctx.rtx); }
+    
+    if (ImGui::SliderInt("Samples Per Pixel", &ctx.rtx.samples_per_pixel, 1, 16)) {
+        rt::resetAccumulation(ctx.rtx);
+    }
 }
 
 void display(Context &ctx)

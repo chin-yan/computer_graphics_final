@@ -23,7 +23,7 @@ struct RTContext {
     glm::vec3 sky_color = glm::vec3(0.5f, 0.7f, 1.0f);
     bool show_normals = true;
     // Add more settings and parameters here
-    // ...
+    int samples_per_pixel = 4;
 };
 
 void setupScene(RTContext &rtx, const char *mesh_filename);
