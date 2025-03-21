@@ -130,7 +130,11 @@ void setupScene(RTContext &rtx, const char *filename)
     g_scene.materials.push_back(ground_material);
     
     // 创建极端金属材质 - 完美反射、极亮的银色
-    Material* metal_material = new Metal(glm::vec3(1.0f, 1.0f, 1.0f), 0.0f);  // 纯白色金属，无模糊
+    // 根據 metallic_roughness 調整金屬材質的模糊程度
+        Material* metal_material = new Metal(
+            glm::vec3(1.0f, 0.9f, 0.3f) * rtx.material_intensity,
+            rtx.metallic_roughness
+        );
     g_scene.materials.push_back(metal_material);
     
     // 创建彩色漫反射材质
@@ -213,8 +217,12 @@ void updateLine(RTContext &rtx, int y)
         
         // 应用gamma校正
         col = col / float(rtx.samples_per_pixel);
-        col = glm::vec3(sqrt(col.x), sqrt(col.y), sqrt(col.z)); // gamma校正
-        
+            
+        // 根據設置決定是否進行Gamma校正
+        if (rtx.enable_gamma_correction) {
+            col = glm::vec3(sqrt(col.x), sqrt(col.y), sqrt(col.z)); // gamma校正
+        }
+            
         rtx.image[y * nx + x] += glm::vec4(col, 1.0f);
     }
 }

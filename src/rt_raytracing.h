@@ -24,6 +24,9 @@ struct RTContext {
     bool show_normals = true;
     // Add more settings and parameters here
     int samples_per_pixel = 16;
+    bool enable_gamma_correction = true;  // 控制是否開啟Gamma校正
+    float metallic_roughness = 0.0f;      // 金屬材質的粗糙度
+    float material_intensity = 1.0f;      // 材質強度
 };
 
 void setupScene(RTContext &rtx, const char *mesh_filename);

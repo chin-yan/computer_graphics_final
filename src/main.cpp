@@ -153,6 +153,13 @@ void showGui(Context &ctx)
     if (ImGui::SliderInt("Samples Per Pixel", &ctx.rtx.samples_per_pixel, 1, 16)) {
         rt::resetAccumulation(ctx.rtx);
     }
+    // 材質控制
+    ImGui::SliderFloat("Metallic Roughness", &ctx.rtx.metallic_roughness, 0.0f, 1.0f);
+    ImGui::SliderFloat("Material Intensity", &ctx.rtx.material_intensity, 0.0f, 2.0f);
+    // 切換Gamma校正
+    if (ImGui::Checkbox("Gamma Correction", &ctx.rtx.enable_gamma_correction)) {
+        rt::resetAccumulation(ctx.rtx);
+    }
 }
 
 void display(Context &ctx)
