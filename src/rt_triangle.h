@@ -34,8 +34,8 @@ bool Triangle::hit(const Ray &r, float t_min, float t_max, HitRecord &rec) const
                 if (temp < t_max && temp > t_min) {
                     rec.t = temp;
                     rec.p = r.point_at_parameter(rec.t);
-                    rec.normal = n;
-                    rec.mat_ptr = mat_ptr;  // 设置材质指针
+                    rec.normal = glm::normalize(n);  // 确保法线被正规化
+                    rec.mat_ptr = mat_ptr;  // 确保材质被正确设置
                     return true;
                 }
             }

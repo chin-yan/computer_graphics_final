@@ -44,11 +44,11 @@ public:
     }
     
     glm::vec3 albedo;
-    float fuzz;
+    float fuzz=0.0;
 };
 
-// 反射函数
+// 确保reflect函数正确实现
 inline glm::vec3 reflect(const glm::vec3& v, const glm::vec3& n) {
-    return v - 2 * glm::dot(v, n) * n;
+    return v - 2.0f * glm::dot(v, n) * n;
 }
 }  // namespace rt

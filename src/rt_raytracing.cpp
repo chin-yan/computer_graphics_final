@@ -46,11 +46,14 @@ bool hit_world(const Ray &r, float t_min, float t_max, HitRecord &rec)
     bool hit_anything = false;
     float closest_so_far = t_max;
 
+    // 检测地面
     if (g_scene.ground.hit(r, t_min, closest_so_far, temp_rec)) {
         hit_anything = true;
         closest_so_far = temp_rec.t;
         rec = temp_rec;
     }
+    
+    // 检测所有球体
     for (int i = 0; i < g_scene.spheres.size(); ++i) {
         if (g_scene.spheres[i].hit(r, t_min, closest_so_far, temp_rec)) {
             hit_anything = true;
@@ -58,6 +61,8 @@ bool hit_world(const Ray &r, float t_min, float t_max, HitRecord &rec)
             rec = temp_rec;
         }
     }
+    
+    // 检测所有盒子
     for (int i = 0; i < g_scene.boxes.size(); ++i) {
         if (g_scene.boxes[i].hit(r, t_min, closest_so_far, temp_rec)) {
             hit_anything = true;
@@ -65,6 +70,8 @@ bool hit_world(const Ray &r, float t_min, float t_max, HitRecord &rec)
             rec = temp_rec;
         }
     }
+    
+    // 检测网格(兔子模型)
     for (int i = 0; i < g_scene.mesh.size(); ++i) {
         if (g_scene.mesh[i].hit(r, t_min, closest_so_far, temp_rec)) {
             hit_anything = true;
@@ -72,13 +79,14 @@ bool hit_world(const Ray &r, float t_min, float t_max, HitRecord &rec)
             rec = temp_rec;
         }
     }
+    
     return hit_anything;
 }
 
 // 修改 color 函数以使用材质
 glm::vec3 color(RTContext &rtx, const Ray &r, int max_bounces)
 {
-    if (max_bounces < 0) return glm::vec3(0.0f);
+    if (max_bounces < 0) return glm::vec3(0.0f);  // 避免无限递归
 
     HitRecord rec;
     if (hit_world(r, rtx.epsilon, 9999.0f, rec)) {
@@ -88,26 +96,46 @@ glm::vec3 color(RTContext &rtx, const Ray &r, int max_bounces)
         Ray scattered;
         glm::vec3 attenuation;
         
-        // 检查是否有材质，如果没有则使用默认行为
+        // 关键部分：确保材质散射计算正确
         if (rec.mat_ptr && rec.mat_ptr->scatter(r, rec, attenuation, scattered)) {
+            // 递归计算反射光线的颜色
             return attenuation * color(rtx, scattered, max_bounces - 1);
-        } else {
-            // 如果没有材质或散射失败，使用旧的漫反射行为
-            glm::vec3 target = rec.p + rec.normal + random_in_unit_sphere();
-            return 0.5f * color(rtx, Ray(rec.p, target - rec.p), max_bounces - 1);
         }
+        
+        // 如果没有材质或散射失败，返回黑色
+        return glm::vec3(0.0f);
+    }else {
+        // 背景部分 - 确保这部分代码被执行
+        glm::vec3 unit_direction = glm::normalize(r.direction());
+        float t = 0.5f * (unit_direction.y + 1.0f);
+        
+        // 添加调试输出
+        static bool debug_once = true;
+        if (debug_once) {
+            std::cout << "背景颜色：地面 = ("
+                      << rtx.ground_color.x << ","
+                      << rtx.ground_color.y << ","
+                      << rtx.ground_color.z << "), 天空 = ("
+                      << rtx.sky_color.x << ","
+                      << rtx.sky_color.y << ","
+                      << rtx.sky_color.z << ")" << std::endl;
+            debug_once = false;
+        }
+        
+        return (1.0f - t) * rtx.ground_color + t * rtx.sky_color;
     }
 
-    // 天空颜色
+    // 背景颜色
     glm::vec3 unit_direction = glm::normalize(r.direction());
     float t = 0.5f * (unit_direction.y + 1.0f);
     return (1.0f - t) * rtx.ground_color + t * rtx.sky_color;
 }
+
 // 修改 setupScene 函数添加更多球体和材质
 void setupScene(RTContext &rtx, const char *filename)
 {
-    // 设置高对比度背景 - 黑色地面与亮色天空对比
-    rtx.ground_color = glm::vec3(0.0f, 0.0f, 0.0f);  // 纯黑色的地面
+    // 设置高对比度背景
+    rtx.ground_color = glm::vec3(0.0f, 0.0f, 0.0f);  // 纯黑色地面
     rtx.sky_color = glm::vec3(0.6f, 0.7f, 1.0f);     // 明亮的天蓝色
 
     // 创建材质
@@ -117,12 +145,28 @@ void setupScene(RTContext &rtx, const char *filename)
     // 创建极端金属材质 - 完美反射、极亮的银色
     Material* metal_material = new Metal(glm::vec3(1.0f, 1.0f, 1.0f), 0.0f);  // 纯白色金属，无模糊
     g_scene.materials.push_back(metal_material);
+    
+    // 创建彩色漫反射材质
+    Material* red_material = new Lambertian(glm::vec3(0.8f, 0.2f, 0.2f));    // 红色
+    Material* green_material = new Lambertian(glm::vec3(0.2f, 0.8f, 0.2f));  // 绿色
+    Material* blue_material = new Lambertian(glm::vec3(0.2f, 0.2f, 0.8f));   // 蓝色
+    g_scene.materials.push_back(red_material);
+    g_scene.materials.push_back(green_material);
+    g_scene.materials.push_back(blue_material);
 
     // 设置地面 - 使用纯黑色材质
     g_scene.ground = Sphere(glm::vec3(0.0f, -1000.5f, 0.0f), 1000.0f, ground_material);
     
     // 清空球体列表
     g_scene.spheres.clear();
+    
+    // 设置更小的球体尺寸
+    float sphere_radius = 0.1f;  // 将球体半径减小到0.1
+
+    // 添加三个小球，保持原来的位置
+    g_scene.spheres.push_back(Sphere(glm::vec3(-0.5f, 0.0f, 0.5f), sphere_radius, red_material));
+    g_scene.spheres.push_back(Sphere(glm::vec3(0.5f, 0.0f, 0.5f), sphere_radius, green_material));
+    g_scene.spheres.push_back(Sphere(glm::vec3(0.0f, 0.5f, 0.5f), sphere_radius, blue_material));
 
     // 加载兔子模型，使用极端金属材质
     cg::OBJMesh mesh;
@@ -138,6 +182,7 @@ void setupScene(RTContext &rtx, const char *filename)
         g_scene.mesh.push_back(Triangle(v0, v1, v2, metal_material));
     }
 }
+
 // MODIFY THIS FUNCTION!
 void updateLine(RTContext &rtx, int y)
 {
@@ -150,50 +195,31 @@ void updateLine(RTContext &rtx, int y)
     glm::vec3 origin(0.0f, 0.0f, 0.0f);
     glm::mat4 world_from_view = glm::inverse(rtx.view);
 
-    // 可以在此处声明调试标志
-    static bool debug_first_pixel = true;
-
-    // 你可以尝试通过取消注释此行来并行化此循环：
-    //#pragma omp parallel for schedule(dynamic)
     for (int x = 0; x < nx; ++x) {
-        // 在这里可以正确使用 x 变量
-        if (debug_first_pixel && x == nx/2 && y == ny/2) {
-            std::cout << "调试中心像素..." << std::endl;
-            std::cout << "场景中的球体数量: " << g_scene.spheres.size() << std::endl;
-            std::cout << "场景中的三角形数量: " << g_scene.mesh.size() << std::endl;
-            debug_first_pixel = false;
-        }
-
         glm::vec3 col(0.0f);
         
-        // 以下是原有代码
+        // 处理第一帧
         if (rtx.current_frame <= 0) {
-            // 这里我们让第一帧与旧图像混合，
-            // 以平滑重置累积时的过渡
             glm::vec4 old = rtx.image[y * nx + x];
             rtx.image[y * nx + x] = glm::clamp(old / glm::max(1.0f, old.a), 0.0f, 1.0f);
         }
         
-        // 对每个像素进行多次采样
+        // 多重采样
         for (int s = 0; s < rtx.samples_per_pixel; s++) {
-            // 添加随机抖动
-            float random_u = float(rand()) / float(RAND_MAX); // 0-1之间的随机数
-            float random_v = float(rand()) / float(RAND_MAX);
-            
-            // 计算带抖动的 u 和 v
-            float u = (float(x) + random_u) / float(nx);
-            float v = (float(y) + random_v) / float(ny);
+            float u = float(x + drand48()) / float(nx);
+            float v = float(y + drand48()) / float(ny);
             
             Ray r(origin, lower_left_corner + u * horizontal + v * vertical);
             r.A = glm::vec3(world_from_view * glm::vec4(r.A, 1.0f));
             r.B = glm::vec3(world_from_view * glm::vec4(r.B, 0.0f));
             
-            // 累积颜色结果
             col += color(rtx, r, rtx.max_bounces);
         }
         
-        // 计算平均值并更新图像
-        col = glm::sqrt(col / float(rtx.samples_per_pixel)); // gamma校正
+        // 应用gamma校正
+        col = col / float(rtx.samples_per_pixel);
+        col = glm::vec3(sqrt(col.x), sqrt(col.y), sqrt(col.z)); // gamma校正
+        
         rtx.image[y * nx + x] += glm::vec4(col, 1.0f);
     }
 }
