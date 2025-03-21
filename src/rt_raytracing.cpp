@@ -123,10 +123,10 @@ void setupScene(RTContext &rtx, const char *filename)
 {
     // 设置高对比度背景
     rtx.ground_color = glm::vec3(0.0f, 0.0f, 0.0f);  // 纯黑色地面
-    rtx.sky_color = glm::vec3(0.6f, 0.7f, 1.0f);     // 明亮的天蓝色
+    rtx.sky_color = glm::vec3(1.0f, 1.0f, 1.0f);     // 明亮的天蓝色
 
     // 创建材质
-    Material* ground_material = new Lambertian(glm::vec3(0.0f, 0.0f, 0.0f));  // 纯黑色地面材质
+    Material* ground_material = new Lambertian(glm::vec3(0.3f, 0.3f, 0.3f));
     g_scene.materials.push_back(ground_material);
     
     // 创建极端金属材质 - 完美反射、极亮的银色
