@@ -109,19 +109,6 @@ glm::vec3 color(RTContext &rtx, const Ray &r, int max_bounces)
         glm::vec3 unit_direction = glm::normalize(r.direction());
         float t = 0.5f * (unit_direction.y + 1.0f);
         
-        // 添加调试输出
-        static bool debug_once = true;
-        if (debug_once) {
-            std::cout << "背景颜色：地面 = ("
-                      << rtx.ground_color.x << ","
-                      << rtx.ground_color.y << ","
-                      << rtx.ground_color.z << "), 天空 = ("
-                      << rtx.sky_color.x << ","
-                      << rtx.sky_color.y << ","
-                      << rtx.sky_color.z << ")" << std::endl;
-            debug_once = false;
-        }
-        
         return (1.0f - t) * rtx.ground_color + t * rtx.sky_color;
     }
 
@@ -160,13 +147,19 @@ void setupScene(RTContext &rtx, const char *filename)
     // 清空球体列表
     g_scene.spheres.clear();
     
-    // 设置更小的球体尺寸
-    float sphere_radius = 0.1f;  // 将球体半径减小到0.1
+    // 设置球体尺寸
+    float sphere_radius = 0.1f;  // 球体半径为0.1
+    
+    // 计算球体应该放置的y坐标
+    // 地面是一个位于y=-1000.5f且半径为1000.0f的大球体
+    // 所以地面的表面位于y=-0.5f
+    // 球体要放在地面上，其中心y坐标应该是-0.5f + sphere_radius
+    float y_position = -0.5f + sphere_radius;
 
-    // 添加三个小球，保持原来的位置
-    g_scene.spheres.push_back(Sphere(glm::vec3(-0.5f, 0.0f, 0.5f), sphere_radius, red_material));
-    g_scene.spheres.push_back(Sphere(glm::vec3(0.5f, 0.0f, 0.5f), sphere_radius, green_material));
-    g_scene.spheres.push_back(Sphere(glm::vec3(0.0f, 0.5f, 0.5f), sphere_radius, blue_material));
+    // 添加三个球，放在地面上
+    g_scene.spheres.push_back(Sphere(glm::vec3(-0.5f, y_position, 0.5f), sphere_radius, red_material));
+    g_scene.spheres.push_back(Sphere(glm::vec3(0.5f, y_position, 0.5f), sphere_radius, green_material));
+    g_scene.spheres.push_back(Sphere(glm::vec3(0.0f, y_position, 0.5f), sphere_radius, blue_material));
 
     // 加载兔子模型，使用极端金属材质
     cg::OBJMesh mesh;
@@ -176,6 +169,8 @@ void setupScene(RTContext &rtx, const char *filename)
         int i0 = mesh.indices[i + 0];
         int i1 = mesh.indices[i + 1];
         int i2 = mesh.indices[i + 2];
+        // 调整兔子模型的位置，使其站在地面上
+        // 注意：0.135f可能需要根据模型的实际尺寸进行调整
         glm::vec3 v0 = mesh.vertices[i0] + glm::vec3(0.0f, 0.135f, 0.0f);
         glm::vec3 v1 = mesh.vertices[i1] + glm::vec3(0.0f, 0.135f, 0.0f);
         glm::vec3 v2 = mesh.vertices[i2] + glm::vec3(0.0f, 0.135f, 0.0f);

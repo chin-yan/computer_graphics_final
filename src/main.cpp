@@ -144,16 +144,6 @@ void showGui(Context &ctx)
     if (ImGui::Checkbox("Show normals", &ctx.rtx.show_normals)) { rt::resetAccumulation(ctx.rtx); }
     // Add more settings and parameters here
     // ...
-    
-    if (ImGui::SliderInt("Max bounces", &ctx.rtx.max_bounces, 0, 10)) {
-            rt::resetAccumulation(ctx.rtx);
-        }
-        
-        // 添加样本数控制
-    if (ImGui::SliderInt("Samples Per Pixel", &ctx.rtx.samples_per_pixel, 1, 16)) {
-        rt::resetAccumulation(ctx.rtx);
-    }
-
     ImGui::Text("Progress");
     ImGui::ProgressBar(float(ctx.rtx.current_frame) / ctx.rtx.max_frames);
     if (ImGui::Button("Freeze/Resume")) { ctx.rtx.freeze = !ctx.rtx.freeze; }
