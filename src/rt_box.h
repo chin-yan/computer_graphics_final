@@ -7,11 +7,13 @@ namespace rt {
 class Box : public Hitable {
   public:
     Box() {}
-    Box(const glm::vec3 &cen, const glm::vec3 r) : center(cen), radius(r){};
+    Box(const glm::vec3 &cen, const glm::vec3 r, Material* m = nullptr)
+        : center(cen), radius(r), mat_ptr(m) {};
     virtual bool hit(const Ray &r, float t_min, float t_max, HitRecord &rec) const;
 
     glm::vec3 center;
     glm::vec3 radius;
+    Material* mat_ptr;
 };
 
 // Ray-box test adapted from branchless code at
@@ -29,6 +31,7 @@ bool Box::hit(const Ray &r, float t_min, float t_max, HitRecord &rec) const
         rec.p = r.point_at_parameter(rec.t);
         glm::vec3 npc = (rec.p - center) / radius;
         rec.normal = glm::sign(npc) * glm::step(glm::compMax(glm::abs(npc)), glm::abs(npc));
+        rec.mat_ptr = mat_ptr;
         return true;
     }
     return false;

@@ -5,12 +5,18 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtx/component_wise.hpp>
 
+#include "rt_ray.h"
+
 namespace rt {
+
+// 前向声明 Material 类
+class Material;
 
 struct HitRecord {
     float t;
     glm::vec3 p;
     glm::vec3 normal;
+    Material* mat_ptr;  // 指向材质的指针
 };
 
 class Hitable {

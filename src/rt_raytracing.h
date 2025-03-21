@@ -19,8 +19,8 @@ struct RTContext {
     int max_bounces = 3;
     float epsilon = 2e-4f;
     glm::mat4 view = glm::mat4(1.0f);
-    glm::vec3 ground_color = glm::vec3(1.0f, 1.0f, 1.0f);
-    glm::vec3 sky_color = glm::vec3(0.5f, 0.7f, 1.0f);
+    glm::vec3 ground_color = glm::vec3(0.05f, 0.05f, 0.05f);  // 几乎黑色的地面
+    glm::vec3 sky_color = glm::vec3(0.1f, 0.1f, 0.3f);        // 深蓝色的天空
     bool show_normals = true;
     // Add more settings and parameters here
     int samples_per_pixel = 4;

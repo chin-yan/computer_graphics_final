@@ -1,21 +1,24 @@
 #pragma once
 
 #include "rt_hitable.h"
+#include "rt_material.h"
 
 namespace rt {
 
 class Triangle : public Hitable {
   public:
     Triangle() {}
-    Triangle(const glm::vec3 &a, const glm::vec3 &b, const glm::vec3 &c) : v0(a), v1(b), v2(c){};
+    Triangle(const glm::vec3 &a, const glm::vec3 &b, const glm::vec3 &c, Material* m = nullptr)
+        : v0(a), v1(b), v2(c), mat_ptr(m) {};
     virtual bool hit(const Ray &r, float t_min, float t_max, HitRecord &rec) const;
 
     glm::vec3 v0;
     glm::vec3 v1;
     glm::vec3 v2;
+    Material* mat_ptr;
 };
 
-// Ray-triangle test adapted from "Real-Time Collision Detection" book (pages 191--192)
+// Ray-triangle test
 bool Triangle::hit(const Ray &r, float t_min, float t_max, HitRecord &rec) const
 {
     glm::vec3 n = glm::cross(v1 - v0, v2 - v0);
@@ -32,6 +35,7 @@ bool Triangle::hit(const Ray &r, float t_min, float t_max, HitRecord &rec) const
                     rec.t = temp;
                     rec.p = r.point_at_parameter(rec.t);
                     rec.normal = n;
+                    rec.mat_ptr = mat_ptr;  // 设置材质指针
                     return true;
                 }
             }
