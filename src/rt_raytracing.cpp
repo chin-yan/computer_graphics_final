@@ -17,11 +17,10 @@ struct Scene {
     std::vector<Sphere> spheres;
     std::vector<Box> boxes;
     std::vector<Triangle> mesh;
-    Box mesh_bbox;
-    // 存储材质，以便后续清理内存
+    Box mesh_bbox;  // 網格的包圍盒
     std::vector<Material*> materials;
     
-    // 析构函数清理材质
+    // 析構函數清理材質
     ~Scene() {
         for (auto material : materials) {
             delete material;
@@ -46,14 +45,14 @@ bool hit_world(const Ray &r, float t_min, float t_max, HitRecord &rec)
     bool hit_anything = false;
     float closest_so_far = t_max;
 
-    // 检测地面
+    // 檢測地面
     if (g_scene.ground.hit(r, t_min, closest_so_far, temp_rec)) {
         hit_anything = true;
         closest_so_far = temp_rec.t;
         rec = temp_rec;
     }
     
-    // 检测所有球体
+    // 檢測所有球體
     for (int i = 0; i < g_scene.spheres.size(); ++i) {
         if (g_scene.spheres[i].hit(r, t_min, closest_so_far, temp_rec)) {
             hit_anything = true;
@@ -62,7 +61,7 @@ bool hit_world(const Ray &r, float t_min, float t_max, HitRecord &rec)
         }
     }
     
-    // 检测所有盒子
+    // 檢測所有盒子
     for (int i = 0; i < g_scene.boxes.size(); ++i) {
         if (g_scene.boxes[i].hit(r, t_min, closest_so_far, temp_rec)) {
             hit_anything = true;
@@ -71,12 +70,15 @@ bool hit_world(const Ray &r, float t_min, float t_max, HitRecord &rec)
         }
     }
     
-    // 检测网格(兔子模型)
-    for (int i = 0; i < g_scene.mesh.size(); ++i) {
-        if (g_scene.mesh[i].hit(r, t_min, closest_so_far, temp_rec)) {
-            hit_anything = true;
-            closest_so_far = temp_rec.t;
-            rec = temp_rec;
+    // 先檢測網格的包圍盒，如果命中再檢測所有三角形
+    if (g_scene.mesh.size() > 0 && g_scene.mesh_bbox.hit(r, t_min, closest_so_far, temp_rec)) {
+        // 包圍盒命中，檢測所有三角形
+        for (int i = 0; i < g_scene.mesh.size(); ++i) {
+            if (g_scene.mesh[i].hit(r, t_min, closest_so_far, temp_rec)) {
+                hit_anything = true;
+                closest_so_far = temp_rec.t;
+                rec = temp_rec;
+            }
         }
     }
     
@@ -180,6 +182,37 @@ void setupScene(RTContext &rtx, const char *filename)
         glm::vec3 v2 = mesh.vertices[i2] + glm::vec3(0.0f, 0.135f, 0.0f);
         g_scene.mesh.push_back(Triangle(v0, v1, v2, metal_material));
     }
+    // 計算模型的最小和最大邊界
+        glm::vec3 min_bounds(FLT_MAX);
+        glm::vec3 max_bounds(-FLT_MAX);
+        
+        for (int i = 0; i < mesh.indices.size(); i += 3) {
+            int i0 = mesh.indices[i + 0];
+            int i1 = mesh.indices[i + 1];
+            int i2 = mesh.indices[i + 2];
+            
+            glm::vec3 v0 = mesh.vertices[i0] + glm::vec3(0.0f, 0.135f, 0.0f);
+            glm::vec3 v1 = mesh.vertices[i1] + glm::vec3(0.0f, 0.135f, 0.0f);
+            glm::vec3 v2 = mesh.vertices[i2] + glm::vec3(0.0f, 0.135f, 0.0f);
+            
+            // 更新邊界
+            min_bounds = glm::min(min_bounds, v0);
+            min_bounds = glm::min(min_bounds, v1);
+            min_bounds = glm::min(min_bounds, v2);
+            
+            max_bounds = glm::max(max_bounds, v0);
+            max_bounds = glm::max(max_bounds, v1);
+            max_bounds = glm::max(max_bounds, v2);
+            
+            g_scene.mesh.push_back(Triangle(v0, v1, v2, metal_material));
+        }
+        
+        // 計算包圍盒的中心和半徑
+        glm::vec3 center = (min_bounds + max_bounds) * 0.5f;
+        glm::vec3 radius = (max_bounds - min_bounds) * 0.5f;
+        
+        // 創建稍微大一點的包圍盒（為了安全）
+        g_scene.mesh_bbox = Box(center, radius * 1.01f, metal_material);
 }
 
 // MODIFY THIS FUNCTION!
